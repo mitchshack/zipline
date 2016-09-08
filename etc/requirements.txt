@@ -67,4 +67,4 @@ intervaltree==2.1.0
 lru-dict==1.1.4
 
 # For financial risk calculations
-empyrical==0.1.11
+-e git://github.com/quantopian/empyrical.git@89d9ce6649d836e5a2ae85f3cfac9160217dd986#egg=empyrical-dev
