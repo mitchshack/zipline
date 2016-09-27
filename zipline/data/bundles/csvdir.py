@@ -98,6 +98,8 @@ def csvdir_equities(tframe='daily', start=None, end=None):
         metadata['exchange'] = "CSVDIR"
         asset_db_writer.write(equities=metadata)
 
+        adjustment_writer.write(splits=None, dividends=None)
+
     return ingest
 
 register_calendar_alias("CSVDIR", "NYSE")
