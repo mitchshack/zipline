@@ -92,10 +92,10 @@ def csvdir_equities(tframe='daily', start=None, end=None):
         writer = minute_bar_writer if tframe == 'minute' else daily_bar_writer
         writer.write(_pricing_iter(), show_progress=show_progress)
 
-        # Hardcode the exchange to "CUSTOM" for all assets and (elsewhere)
-        # register "CUSTOM" to resolve to the NYSE calendar, because these are
+        # Hardcode the exchange to "CSVDIR" for all assets and (elsewhere)
+        # register "CSVDIR" to resolve to the NYSE calendar, because these are
         # all equities and thus can use the NYSE calendar.
-        metadata['exchange'] = "CUSTOM"
+        metadata['exchange'] = "CSVDIR"
         asset_db_writer.write(equities=metadata)
 
     return ingest
