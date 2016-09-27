@@ -1,3 +1,6 @@
+"""
+Module for building a complete dataset from local directory with csv files.
+"""
 import os
 import sys
 
@@ -38,7 +41,8 @@ def csvdir_equities(tframe='daily', start=None, end=None):
 
     Notes
     -----
-    The sids for each symbol will be the index into the symbols sequence.
+    Environment variable CSVDIR must contain path to the directory with <symbol>.cvs files
+    sids for each symbol will be the index into the symbols sequence.
     """
     
     def ingest(environ, asset_db_writer, minute_bar_writer, daily_bar_writer,
