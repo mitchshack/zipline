@@ -2,6 +2,8 @@
 A simple Pipeline algorithm that longs the top 3 stocks by RSI and shorts
 the bottom 3 each day.
 """
+
+import pandas
 from six import viewkeys
 from zipline.api import (
     attach_pipeline,
@@ -30,7 +32,7 @@ def rebalance(context, data):
     # Pipeline data will be a dataframe with boolean columns named 'longs' and
     # 'shorts'.
     pipeline_data = context.pipeline_data
-    all_assets = pipeline_data.index
+    all_assets = pandas.Index(asset for asset in pipeline_data.index if data.can_trade(asset))
 
     longs = all_assets[pipeline_data.longs]
     shorts = all_assets[pipeline_data.shorts]
