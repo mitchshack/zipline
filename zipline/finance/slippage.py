@@ -17,6 +17,7 @@ from __future__ import division
 import abc
 import math
 from six import with_metaclass
+import numpy as np
 
 from zipline.finance.transaction import create_transaction
 
@@ -69,7 +70,7 @@ class SlippageModel(with_metaclass(abc.ABCMeta)):
         self._volume_for_bar = 0
         volume = data.current(asset, "volume")
 
-        if volume == 0:
+        if volume == 0 or np.isnan(volume):
             return
 
         # can use the close price, since we verified there's volume in this
