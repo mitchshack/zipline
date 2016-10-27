@@ -1941,7 +1941,7 @@ class TradingAlgorithm(object):
         :func:`zipline.api.order_target`
         :func:`zipline.api.order_target_value`
         """
-        if not self._can_order_asset(asset):
+        if not self._can_order_asset(asset) or np.isnan(self.portfolio.portfolio_value):
             return None
 
         target_value = self.portfolio.portfolio_value * target
