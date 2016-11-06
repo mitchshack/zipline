@@ -64,10 +64,11 @@ class CSVDIRBundle:
 
         self.splits = DataFrame()
         self.dividends = DataFrame()
+        self.fundamentals_writer = None
 
     def ingest(self, environ, asset_db_writer, minute_bar_writer, daily_bar_writer,
-               adjustment_writer, calendar, start_session, end_session, cache,
-               show_progress, output_dir):
+               adjustment_writer, fundamentals_writer, calendar, start_session,
+               end_session, cache, show_progress, output_dir):
 
         csvdir = os.environ.get('CSVDIR')
         if not csvdir:

@@ -455,6 +455,7 @@ def _make_bundle_core():
                 minute_bar_writer,
                 daily_bar_writer,
                 adjustment_db_writer,
+                fundamentals_db_writer,
                 calendar,
                 start_session,
                 end_session,

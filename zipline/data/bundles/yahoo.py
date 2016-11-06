@@ -61,6 +61,7 @@ def yahoo_equities(symbols, start=None, end=None):
                minute_bar_writer,  # unused
                daily_bar_writer,
                adjustment_writer,
+               fundamentals_writer,
                calendar,
                start_session,
                end_session,
