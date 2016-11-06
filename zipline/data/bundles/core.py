@@ -14,6 +14,7 @@ from ..us_equity_pricing import (
     BcolzDailyBarWriter,
     SQLiteAdjustmentReader,
     SQLiteAdjustmentWriter,
+    SQLiteFundamentalsWriter,
 )
 from ..minute_bars import (
     BcolzMinuteBarReader,
@@ -89,6 +90,8 @@ def asset_db_relative(bundle_name, timestr, environ=None, db_version=None):
 
     return bundle_name, timestr, 'assets-%d.sqlite' % db_version
 
+def fundamentals_db_relative(bundle_name, timestr, environ=None):
+    return bundle_name, timestr, 'fundamentals.sqlite'
 
 def to_bundle_ingest_dirname(ts):
     """Convert a pandas Timestamp into the name of the directory for the
@@ -428,11 +431,20 @@ def _make_bundle_core():
                         overwrite=True,
                     )
                 )
+                fundamentals_db_writer = stack.enter_context(
+                    SQLiteFundamentalsWriter(
+                        wd.getpath(*fundamentals_db_relative(
+                            name, timestr, environ=environ)),
+                        calendar.all_sessions,
+                        overwrite=True,
+                    )
+                )
             else:
                 daily_bar_writer = None
                 minute_bar_writer = None
                 asset_db_writer = None
                 adjustment_db_writer = None
+                fundamentals_db_writer = None
                 if assets_versions:
                     raise ValueError('Need to ingest a bundle that creates '
                                      'writers in order to downgrade the assets'
