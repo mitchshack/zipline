@@ -17,6 +17,13 @@ from os import remove
 import sqlite3
 import warnings
 
+from abc import (
+    ABCMeta,
+    abstractmethod,
+)
+
+from six import with_metaclass
+
 from bcolz import (
     carray,
     ctable,
@@ -831,30 +838,11 @@ class PanelBarReader(SessionBarReader):
         return self._first_trading_day
 
 
-class SQLiteAdjustmentWriter(object):
+class SQLiteWriter(with_metaclass(ABCMeta)):
     """
-    Writer for data to be read by SQLiteAdjustmentReader
-
-    Parameters
-    ----------
-    conn_or_path : str or sqlite3.Connection
-        A handle to the target sqlite database.
-    equity_daily_bar_reader : BcolzDailyBarReader
-        Daily bar reader to use for dividend writes.
-    overwrite : bool, optional, default=False
-        If True and conn_or_path is a string, remove any existing files at the
-        given path before connecting.
-
-    See Also
-    --------
-    zipline.data.us_equity_pricing.SQLiteAdjustmentReader
+    Base class for SQLite writers
     """
-
-    def __init__(self,
-                 conn_or_path,
-                 equity_daily_bar_reader,
-                 calendar,
-                 overwrite=False):
+    def __init__(self, conn_or_path, overwrite=False):
         if isinstance(conn_or_path, sqlite3.Connection):
             self.conn = conn_or_path
         elif isinstance(conn_or_path, string_types):
@@ -868,9 +856,6 @@ class SQLiteAdjustmentWriter(object):
             self.uri = conn_or_path
         else:
             raise TypeError("Unknown connection type %s" % type(conn_or_path))
-
-        self._equity_daily_bar_reader = equity_daily_bar_reader
-        self._calendar = calendar
 
     def _write(self, tablename, expected_dtypes, frame):
         if frame is None or frame.empty:
@@ -908,6 +893,45 @@ class SQLiteAdjustmentWriter(object):
             if_exists='append',
             chunksize=50000,
         )
+
+    def close(self):
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        self.close()
+
+
+class SQLiteAdjustmentWriter(SQLiteWriter):
+    """
+    Writer for data to be read by SQLiteAdjustmentReader
+
+    Parameters
+    ----------
+    conn_or_path : str or sqlite3.Connection
+        A handle to the target sqlite database.
+    equity_daily_bar_reader : BcolzDailyBarReader
+        Daily bar reader to use for dividend writes.
+    overwrite : bool, optional, default=False
+        If True and conn_or_path is a string, remove any existing files at the
+        given path before connecting.
+
+    See Also
+    --------
+    zipline.data.us_equity_pricing.SQLiteAdjustmentReader
+    """
+
+    def __init__(self,
+                 conn_or_path,
+                 equity_daily_bar_reader,
+                 calendar,
+                 overwrite=False):
+        SQLiteWriter.__init__(self, conn_or_path, overwrite)
+
+        self._equity_daily_bar_reader = equity_daily_bar_reader
+        self._calendar = calendar
 
     def write_frame(self, tablename, frame):
         if tablename not in SQLITE_ADJUSTMENT_TABLENAMES:
@@ -1080,12 +1104,6 @@ class SQLiteAdjustmentWriter(object):
         dividend_ratios = self.calc_dividend_ratios(dividends)
         self.write_frame('dividends', dividend_ratios)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc_info):
-        self.close()
-
     def write(self,
               splits=None,
               mergers=None,
@@ -1206,9 +1224,6 @@ class SQLiteAdjustmentWriter(object):
             "CREATE INDEX stock_dividends_payouts_ex_date "
             "ON stock_dividend_payouts(ex_date)"
         )
-
-    def close(self):
-        self.conn.close()
 
 
 UNPAID_QUERY_TEMPLATE = """
