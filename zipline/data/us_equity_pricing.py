@@ -108,6 +108,14 @@ SQLITE_STOCK_DIVIDEND_PAYOUT_COLUMN_DTYPES = {
     'payment_sid': integer,
     'ratio': float,
 }
+
+SQLITE_FUNDAMENTALS_COLUMN_DTYPES = {
+    'sid': integer,
+    'date': integer,
+    'name': object,
+    'value': float,
+}
+
 UINT32_MAX = iinfo(uint32).max
 
 
@@ -1329,3 +1337,52 @@ class SQLiteAdjustmentReader(object):
         c.close()
 
         return stock_divs
+
+class SQLiteFundamentalsWriter(SQLiteWriter):
+    """
+    Writer for data to be read by SQLiteFundamentalsReader
+
+    Parameters
+    ----------
+    conn_or_path : str or sqlite3.Connection
+        A handle to the target sqlite database.
+    overwrite : bool, optional, default=False
+        If True and conn_or_path is a string, remove any existing files at the
+        given path before connecting.
+
+    See Also
+    --------
+    zipline.data.us_equity_pricing.SQLiteFundamentalsReader
+    """
+    def __init__(self, conn_or_path, calendar, overwrite=False):
+        SQLiteWriter.__init__(self, conn_or_path, overwrite)
+        self._calendar = calendar
+
+    def write(self, fundamentals=None):
+        """
+        Writes data to a SQLite file to be read by SQLiteFundamentalsReader.
+
+        Parameters
+        ----------
+        fundamentals : pandas.DataFrame, optional
+            Dataframe containing fundamentals data. The format of this dataframe is:
+              sid : int
+                  The asset id associated with this fundamentals.
+              date : datetime64
+                  The date of the fundamental data
+              name : string
+                  A name of the fundamental
+              value : float
+                  A value of the fundamental
+        """
+        if fundamentals is None:
+            data = None
+        else:
+            data = fundamentals.copy()
+            data['date'] = data['date'].values.astype('datetime64[s]').astype(integer)
+
+        self._write(
+            'fundamentals',
+            SQLITE_FUNDAMENTALS_COLUMN_DTYPES,
+            data,
+        )
