@@ -64,7 +64,7 @@ class CSVDIRBundle:
 
         self.splits = DataFrame()
         self.dividends = DataFrame()
-        self.fundamentals_writer = None
+        self.fundamentals = DataFrame()
 
     def ingest(self, environ, asset_db_writer, minute_bar_writer, daily_bar_writer,
                adjustment_writer, fundamentals_writer, calendar, start_session,
@@ -101,9 +101,12 @@ class CSVDIRBundle:
         # register "CSVDIR" to resolve to the NYSE calendar, because these are
         # all equities and thus can use the NYSE calendar.
         self.metadata['exchange'] = "CSVDIR"
+
         asset_db_writer.write(equities=self.metadata)
 
         adjustment_writer.write(splits=self.splits, dividends=self.dividends)
+
+        fundamentals_writer.write(fundamentals=self.fundamentals)
 
     def _pricing_iter(self):
         with maybe_show_progress(self.symbols, self.show_progress,
@@ -148,6 +151,13 @@ class CSVDIRBundle:
                                         self.dividends.shape[0] + div.shape[0]))
                     div.set_index(index, inplace=True)
                     self.dividends = self.dividends.append(div)
+
+                fcsvpath = os.path.join(self.csvdir, 'fundamentals', '%s.csv' % symbol)
+                if os.path.isfile(fcsvpath):
+                    fundamentals = read_csv(fcsvpath, parse_dates=[1],
+                                            infer_datetime_format=True)
+                    fundamentals['sid'] = sid
+                    self.fundamentals = self.fundamentals.append(fundamentals)
 
                 yield sid, dfr
 
