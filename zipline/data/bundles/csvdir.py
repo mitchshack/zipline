@@ -62,9 +62,9 @@ class CSVDIRBundle:
         self.metadata = None
         self.csvdir = None
 
-        self.splits = DataFrame()
-        self.dividends = DataFrame()
-        self.fundamentals = DataFrame()
+        self.splits = None
+        self.dividends = None
+        self.fundamentals = None
 
     def ingest(self, environ, asset_db_writer, minute_bar_writer, daily_bar_writer,
                adjustment_writer, fundamentals_writer, calendar, start_session,
@@ -136,6 +136,8 @@ class CSVDIRBundle:
                     index = Index(range(self.splits.shape[0],
                                         self.splits.shape[0] + split.shape[0]))
                     split.set_index(index, inplace=True)
+                    if self.splits is None:
+                        self.splits = DataFrame()
                     self.splits = self.splits.append(split)
 
                 if 'dividend' in dfr.columns:
@@ -150,6 +152,8 @@ class CSVDIRBundle:
                     index = Index(range(self.dividends.shape[0],
                                         self.dividends.shape[0] + div.shape[0]))
                     div.set_index(index, inplace=True)
+                    if self.dividends is None:
+                        self.dividends = DataFrame()
                     self.dividends = self.dividends.append(div)
 
                 fcsvpath = os.path.join(self.csvdir, 'fundamentals', '%s.csv' % symbol)
@@ -157,6 +161,8 @@ class CSVDIRBundle:
                     fundamentals = read_csv(fcsvpath, parse_dates=[1],
                                             infer_datetime_format=True)
                     fundamentals['sid'] = sid
+                    if self.fundamentals is None:
+                        self.fundamentals = DataFrame()
                     self.fundamentals = self.fundamentals.append(fundamentals)
 
                 yield sid, dfr
