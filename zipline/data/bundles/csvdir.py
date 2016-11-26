@@ -137,6 +137,8 @@ class CSVDIRBundle:
                 self.metadata.iloc[sid] = start_date, end_date, ac_date, symbol
 
                 if 'split' in dfr.columns:
+                    if self.splits is None:
+                        self.splits = DataFrame()
                     tmp = dfr[dfr['split'] != 1.0]['split']
                     split = DataFrame(data=tmp.index.tolist(), columns=['effective_date'])
                     split['ratio'] = tmp.tolist()
@@ -145,11 +147,11 @@ class CSVDIRBundle:
                     index = Index(range(self.splits.shape[0],
                                         self.splits.shape[0] + split.shape[0]))
                     split.set_index(index, inplace=True)
-                    if self.splits is None:
-                        self.splits = DataFrame()
                     self.splits = self.splits.append(split)
 
                 if 'dividend' in dfr.columns:
+                    if self.dividends is None:
+                        self.dividends = DataFrame()
                     # ex_date   amount  sid record_date declared_date pay_date
                     tmp = dfr[dfr['dividend'] != 0.0]['dividend']
                     div = DataFrame(data=tmp.index.tolist(), columns=['ex_date'])
