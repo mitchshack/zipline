@@ -66,6 +66,8 @@ class CSVDIRBundle:
         self.dividends = None
         self.fundamentals = None
 
+        self.fundamentals_loaded = []
+
     def ingest(self, environ, asset_db_writer, minute_bar_writer, daily_bar_writer,
                adjustment_writer, fundamentals_writer, calendar, start_session,
                end_session, cache, show_progress, output_dir):
@@ -163,18 +165,18 @@ class CSVDIRBundle:
                     index = Index(range(self.dividends.shape[0],
                                         self.dividends.shape[0] + div.shape[0]))
                     div.set_index(index, inplace=True)
-                    if self.dividends is None:
-                        self.dividends = DataFrame()
                     self.dividends = self.dividends.append(div)
 
-                fcsvpath = os.path.join(self.csvdir, 'fundamentals', '%s.csv' % symbol)
-                if os.path.isfile(fcsvpath):
-                    fundamentals = read_csv(fcsvpath, parse_dates=[1],
-                                            infer_datetime_format=True)
-                    fundamentals['sid'] = sid
-                    if self.fundamentals is None:
-                        self.fundamentals = DataFrame()
-                    self.fundamentals = self.fundamentals.append(fundamentals)
+                if sid not in self.fundamentals_loaded:
+                    fcsvpath = os.path.join(os.path.dirname(self.csvdir), 'fundamentals', '%s.csv' % symbol)
+                    if os.path.isfile(fcsvpath):
+                        fundamentals = read_csv(fcsvpath, parse_dates=[1],
+                                                infer_datetime_format=True)
+                        fundamentals['sid'] = sid
+                        if self.fundamentals is None:
+                            self.fundamentals = DataFrame()
+                        self.fundamentals = self.fundamentals.append(fundamentals)
+                        self.fundamentals_loaded.append(sid)
 
                 yield sid, dfr
 
