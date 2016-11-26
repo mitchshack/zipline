@@ -52,8 +52,8 @@ class CSVDIRBundle:
     from _pricing_iter method.
     """
 
-    def __init__(self, tframe, start, end):
-        self.tframe = tframe
+    def __init__(self, tframes, start, end):
+        self.tframes = tframes
         self.start = start
         self.end = end
 
@@ -74,33 +74,42 @@ class CSVDIRBundle:
         if not csvdir:
             logger.error("CSVDIR environment variable is not set")
             sys.exit(1)
+
         if not os.path.isdir(csvdir):
             logger.error("%s is not a directory" % csvdir)
             sys.exit(1)
 
-        self.symbols = sorted(item.split('.csv')[0] for item in os.listdir(csvdir) \
-                                                    if item.endswith('.csv'))
-        if not self.symbols:
-            logger.error("no <symbol>.csv files found in %s" % csvdir)
-            sys.exit(1)
+        for tframe in self.tframes:
+            ddir = os.path.join(csvdir, tframe)
+            if not os.path.isdir(ddir):
+                logger.error("%s is not a directory" % ddir)
 
-        self.csvdir = csvdir
+        for tframe in self.tframes:
+            ddir = os.path.join(csvdir, tframe)
 
-        self.metadata = DataFrame(empty(len(self.symbols),
-                                        dtype=[('start_date', 'datetime64[ns]'),
-                                               ('end_date', 'datetime64[ns]'),
-                                               ('auto_close_date', 'datetime64[ns]'),
-                                               ('symbol', 'object')]))
+            self.symbols = sorted(item.split('.csv')[0] for item in os.listdir(ddir) \
+                                                        if item.endswith('.csv'))
+            if not self.symbols:
+                logger.error("no <symbol>.csv files found in %s" % ddir)
+                sys.exit(1)
 
-        self.show_progress = show_progress
+            self.csvdir = ddir
 
-        writer = minute_bar_writer if self.tframe == 'minute' else daily_bar_writer
-        writer.write(self._pricing_iter(), show_progress=show_progress)
+            self.metadata = DataFrame(empty(len(self.symbols),
+                                            dtype=[('start_date', 'datetime64[ns]'),
+                                                   ('end_date', 'datetime64[ns]'),
+                                                   ('auto_close_date', 'datetime64[ns]'),
+                                                   ('symbol', 'object')]))
 
-        # Hardcode the exchange to "CSVDIR" for all assets and (elsewhere)
-        # register "CSVDIR" to resolve to the NYSE calendar, because these are
-        # all equities and thus can use the NYSE calendar.
-        self.metadata['exchange'] = "CSVDIR"
+            self.show_progress = show_progress
+
+            writer = minute_bar_writer if tframe == 'minute' else daily_bar_writer
+            writer.write(self._pricing_iter(), show_progress=show_progress)
+
+            # Hardcode the exchange to "CSVDIR" for all assets and (elsewhere)
+            # register "CSVDIR" to resolve to the NYSE calendar, because these are
+            # all equities and thus can use the NYSE calendar.
+            self.metadata['exchange'] = "CSVDIR"
 
         asset_db_writer.write(equities=self.metadata)
 
