@@ -128,7 +128,8 @@ class DataPortal(object):
                  future_minute_reader=None,
                  adjustment_reader=None,
                  last_available_session=None,
-                 last_available_minute=None):
+                 last_available_minute=None,
+                 fundamentals_reader=None):
 
         self.trading_calendar = trading_calendar
         self.asset_finder = asset_finder

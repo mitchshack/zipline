@@ -15,6 +15,7 @@ from ..us_equity_pricing import (
     SQLiteAdjustmentReader,
     SQLiteAdjustmentWriter,
     SQLiteFundamentalsWriter,
+    SQLiteFundamentalsReader,
 )
 from ..minute_bars import (
     BcolzMinuteBarReader,
@@ -58,6 +59,13 @@ def daily_equity_path(bundle_name, timestr, environ=None):
 def adjustment_db_path(bundle_name, timestr, environ=None):
     return pth.data_path(
         adjustment_db_relative(bundle_name, timestr, environ),
+        environ=environ,
+    )
+
+
+def fundamentals_db_path(bundle_name, timestr, environ=None):
+    return pth.data_path(
+        fundamentals_db_relative(bundle_name, timestr, environ),
         environ=environ,
     )
 
@@ -148,7 +156,7 @@ RegisteredBundle = namedtuple(
 BundleData = namedtuple(
     'BundleData',
     'asset_finder equity_minute_bar_reader equity_daily_bar_reader '
-    'adjustment_reader',
+    'adjustment_reader fundamentals_reader',
 )
 
 BundleCore = namedtuple(
@@ -544,6 +552,9 @@ def _make_bundle_core():
             ),
             adjustment_reader=SQLiteAdjustmentReader(
                 adjustment_db_path(name, timestr, environ=environ),
+            ),
+            fundamentals_reader=SQLiteFundamentalsReader(
+                fundamentals_db_path(name, timestr, environ=environ),
             ),
         )
 
