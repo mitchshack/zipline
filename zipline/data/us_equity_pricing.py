@@ -47,7 +47,10 @@ from pandas import (
     read_csv,
     Timestamp,
     NaT,
-    DatetimeIndex
+    DatetimeIndex,
+    read_sql,
+    to_datetime,
+    date_range,
 )
 from pandas.tslib import iNaT
 from six import (
@@ -1386,3 +1389,42 @@ class SQLiteFundamentalsWriter(SQLiteWriter):
             SQLITE_FUNDAMENTALS_COLUMN_DTYPES,
             data,
         )
+
+class SQLiteFundamentalsReader(object):
+    """
+    Loads fundamentals from a SQLite database.
+
+    Expects data written in the format output by `SQLiteFundamentalsWriter`.
+
+    Parameters
+    ----------
+    conn : str or sqlite3.Connection
+        Connection from which to load data.
+
+    See Also
+    --------
+    :class:`zipline.data.us_equity_pricing.SQLiteFundamentalsWriter`
+    """
+
+    @preprocess(conn=coerce_string_to_conn)
+    def __init__(self, conn):
+        self.conn = conn
+
+    def read(self, names, dates, assets):
+        sql = '''SELECT sid, value, date
+                 FROM fundamentals
+                  WHERE sid in (%s) and name in (%s) ORDER BY date''' % \
+                     (','.join(map(str, assets)),
+                      ','.join('"%s"' % name.split('column_')[1] for name in names))
+
+        df = read_sql(sql, self.conn, coerce_float=False, index_col='date')
+        df.set_index(to_datetime(df.index, unit='s', utc=True), inplace=True)
+
+        result = DataFrame(index=df.index.unique(), columns=assets)
+
+        for sid in assets:
+            result[sid] = df[df['sid'] == sid]['value']
+
+        result = result.reindex(date_range(result.index[0], result.index[-1]))
+        result.fillna(method='ffill', inplace=True)
+        return result.loc[dates]
