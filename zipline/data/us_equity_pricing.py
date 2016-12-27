@@ -41,6 +41,7 @@ from numpy import (
     issubdtype,
     nan,
     uint32,
+    datetime64,
 )
 from pandas import (
     DataFrame,
@@ -49,8 +50,6 @@ from pandas import (
     NaT,
     DatetimeIndex,
     read_sql,
-    to_datetime,
-    date_range,
 )
 from pandas.tslib import iNaT
 from six import (
@@ -115,7 +114,6 @@ SQLITE_STOCK_DIVIDEND_PAYOUT_COLUMN_DTYPES = {
 SQLITE_FUNDAMENTALS_COLUMN_DTYPES = {
     'sid': integer,
     'date': integer,
-    'name': object,
     'value': float,
 }
 
@@ -1357,9 +1355,8 @@ class SQLiteFundamentalsWriter(SQLiteWriter):
     --------
     zipline.data.us_equity_pricing.SQLiteFundamentalsReader
     """
-    def __init__(self, conn_or_path, calendar, overwrite=False):
+    def __init__(self, conn_or_path, overwrite=False):
         SQLiteWriter.__init__(self, conn_or_path, overwrite)
-        self._calendar = calendar
 
     def write(self, fundamentals=None):
         """
@@ -1379,16 +1376,17 @@ class SQLiteFundamentalsWriter(SQLiteWriter):
                   A value of the fundamental
         """
         if fundamentals is None:
-            data = None
-        else:
-            data = fundamentals.copy()
-            data['date'] = data['date'].values.astype('datetime64[s]').astype(integer)
+            return
 
-        self._write(
-            'fundamentals',
-            SQLITE_FUNDAMENTALS_COLUMN_DTYPES,
-            data,
-        )
+        for name in fundamentals['name'].unique():
+            df = fundamentals[fundamentals['name'] == name].copy()
+            df.drop('name', axis=1, inplace=True)
+            df['date'] = df['date'].values.astype('datetime64[s]').astype(integer)
+            self._write(
+                'fundamentals_%s' % name,
+                SQLITE_FUNDAMENTALS_COLUMN_DTYPES,
+                df,
+            )
 
 class SQLiteFundamentalsReader(object):
     """
@@ -1411,20 +1409,35 @@ class SQLiteFundamentalsReader(object):
         self.conn = conn
 
     def read(self, names, dates, assets):
+        name = names[0].split('column_')[1]
+
+        start_dt64 = dates[0].to_datetime64().astype(integer)/1000000000
+        end_dt64 = dates[-1].to_datetime64().astype(integer)/1000000000
+
         sql = '''SELECT sid, value, date
-                 FROM fundamentals
-                  WHERE sid in (%s) and name in (%s) ORDER BY date''' % \
-                     (','.join(map(str, assets)),
-                      ','.join('"%s"' % name.split('column_')[1] for name in names))
+                 FROM fundamentals_%s
+                 WHERE date < %s ORDER BY date''' % (name, end_dt64)
 
-        df = read_sql(sql, self.conn, coerce_float=False, index_col='date')
-        df.set_index(to_datetime(df.index, unit='s', utc=True), inplace=True)
+        df = read_sql(sql, self.conn, coerce_float=False)
+        result = DataFrame(index=dates, columns=assets)
 
-        result = DataFrame(index=df.index.unique(), columns=assets)
+        for asset in assets:
+            df_sid = df[df['sid'] == asset].copy()
 
-        for sid in assets:
-            result[sid] = df[df['sid'] == sid]['value']
+            # set start_date
+            st_df = df_sid[df_sid['date'] < start_dt64]['date']
+            start_date = st_df.iloc[-1] if st_df.any() else start_dt64
 
-        result = result.reindex(date_range(result.index[0], result.index[-1]))
-        result.fillna(method='ffill', inplace=True)
-        return result.loc[dates]
+            df_sid = df_sid[df_sid['date'] >= start_date]
+            if start_date < start_dt64:
+                result[asset].loc[dates[0]] = df_sid['value'].iloc[0]
+
+            for row in df_sid.iterrows():
+                date, value = int(row[1]['date']), row[1]['value']
+                if date >= end_dt64:
+                    break
+                dtime = datetime64(date, 's')
+                if dtime in result.index:
+                    result[asset].loc[dtime] = value
+
+        return result.fillna(method='ffill')

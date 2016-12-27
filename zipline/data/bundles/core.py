@@ -443,7 +443,6 @@ def _make_bundle_core():
                     SQLiteFundamentalsWriter(
                         wd.getpath(*fundamentals_db_relative(
                             name, timestr, environ=environ)),
-                        calendar.all_sessions,
                         overwrite=True,
                     )
                 )
